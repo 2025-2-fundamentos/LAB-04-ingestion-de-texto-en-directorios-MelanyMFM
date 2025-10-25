@@ -5,69 +5,52 @@
 Escriba el codigo que ejecute la accion solicitada en cada pregunta.
 """
 
+import os
+import zipfile
+import pandas as pd
+
+def descomprimir_archivo(zip_path, destino):
+    """Descomprime un archivo ZIP en la carpeta destino."""
+    if not os.path.exists(destino):
+        os.makedirs(destino)
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        zip_ref.extractall(destino)
+
+def obtener_ruta_datos(base_path):
+    """Verifica y obtiene la ruta correcta de la carpeta de datos extraídos."""
+    expected_path = os.path.join(base_path, "train")
+    if os.path.isdir(expected_path):
+        return base_path
+    subdirs = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+    if len(subdirs) == 1:
+        return os.path.join(base_path, subdirs[0])
+    raise FileNotFoundError("No se encontró la carpeta 'train' en la estructura extraída.")
+
+def procesar_dataset(dataset_path, output_file):
+    """Procesa un conjunto de datos y lo guarda en un archivo CSV."""
+    registros = []
+    for sentiment in ["negative", "positive", "neutral"]:
+        sentiment_path = os.path.join(dataset_path, sentiment)
+        if not os.path.isdir(sentiment_path):
+            raise FileNotFoundError(f"No se encontró la carpeta esperada: {sentiment_path}")
+        for filename in sorted(os.listdir(sentiment_path)):
+            if filename.endswith(".txt"):
+                with open(os.path.join(sentiment_path, filename), "r", encoding="utf-8") as file:
+                    registros.append([file.read().strip(), sentiment])
+    pd.DataFrame(registros, columns=["phrase", "target"]).to_csv(output_file, index=False, encoding="utf-8")
+    print(f"Archivo guardado: {output_file}")
+
+def generar_archivos_csv():
+    """Descomprime el archivo ZIP y genera los archivos CSV de train y test."""
+    zip_path = os.path.join("files", "input.zip")
+    input_folder = os.path.join("files", "input")
+    output_folder = os.path.join("files", "output")
+    descomprimir_archivo(zip_path, input_folder)
+    data_path = obtener_ruta_datos(input_folder)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    for dataset in ["train", "test"]:
+        procesar_dataset(os.path.join(data_path, dataset), os.path.join(output_folder, f"{dataset}_dataset.csv"))
 
 def pregunta_01():
-    """
-    La información requerida para este laboratio esta almacenada en el
-    archivo "files/input.zip" ubicado en la carpeta raíz.
-    Descomprima este archivo.
-
-    Como resultado se creara la carpeta "input" en la raiz del
-    repositorio, la cual contiene la siguiente estructura de archivos:
-
-
-    ```
-    train/
-        negative/
-            0000.txt
-            0001.txt
-            ...
-        positive/
-            0000.txt
-            0001.txt
-            ...
-        neutral/
-            0000.txt
-            0001.txt
-            ...
-    test/
-        negative/
-            0000.txt
-            0001.txt
-            ...
-        positive/
-            0000.txt
-            0001.txt
-            ...
-        neutral/
-            0000.txt
-            0001.txt
-            ...
-    ```
-
-    A partir de esta informacion escriba el código que permita generar
-    dos archivos llamados "train_dataset.csv" y "test_dataset.csv". Estos
-    archivos deben estar ubicados en la carpeta "output" ubicada en la raiz
-    del repositorio.
-
-    Estos archivos deben tener la siguiente estructura:
-
-    * phrase: Texto de la frase. hay una frase por cada archivo de texto.
-    * sentiment: Sentimiento de la frase. Puede ser "positive", "negative"
-      o "neutral". Este corresponde al nombre del directorio donde se
-      encuentra ubicado el archivo.
-
-    Cada archivo tendria una estructura similar a la siguiente:
-
-    ```
-    |    | phrase                                                                                                                                                                 | target   |
-    |---:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------|
-    |  0 | Cardona slowed her vehicle , turned around and returned to the intersection , where she called 911                                                                     | neutral  |
-    |  1 | Market data and analytics are derived from primary and secondary research                                                                                              | neutral  |
-    |  2 | Exel is headquartered in Mantyharju in Finland                                                                                                                         | neutral  |
-    |  3 | Both operating profit and net sales for the three-month period increased , respectively from EUR16 .0 m and EUR139m , as compared to the corresponding quarter in 2006 | positive |
-    |  4 | Tampere Science Parks is a Finnish company that owns , leases and builds office properties and it specialises in facilities for technology-oriented businesses         | neutral  |
-    ```
-
-
-    """
+    generar_archivos_csv()
